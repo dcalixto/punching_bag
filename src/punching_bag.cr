@@ -80,13 +80,13 @@ class PunchingBag
 
     case result
     when Int64
-      result.to_i
+      result
     when Float64
-      result.to_i
+      result.to_i64
     when Slice(UInt8)
-      result.to_s.to_i
+      result.to_s.to_i64
     when Nil
-      0
+      0_i64
     else
       raise "Unexpected result type: #{result.class}"
     end
