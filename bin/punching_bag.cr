@@ -1,18 +1,7 @@
 #!/usr/bin/env crystal
 
-require "../src/punching_bag"
+require "../src/cli"
 
-class CLI
-  def self.run
-    case ARGV[0]?
-    when "setup"
-      PunchingBag::CLI.setup
-      exit 0
-    else
-      puts "Usage: punching_bag [setup]"
-      exit 1
-    end
-  end
+if ARGV.size > 0
+  PunchingBag::CLI.run(ARGV[0])
 end
-
-CLI.run
