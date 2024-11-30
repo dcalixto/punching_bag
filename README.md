@@ -1,4 +1,4 @@
-# PunchingBag
+# Punching Bag
 
 ![Punch Bag](./src/punching-bag.gif)
 
