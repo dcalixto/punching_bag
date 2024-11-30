@@ -1,32 +1,41 @@
 require "./punching_bag"
 
 class PunchingBag::CLI
-  def self.setup
-    DB.open(PunchingBag::Configuration.database_url) do |db|
-      db.exec <<-SQL
-        CREATE TABLE IF NOT EXISTS punches (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          punchable_id INTEGER NOT NULL,
-          punchable_type TEXT NOT NULL,
-          starts_at DATETIME NOT NULL,
-          ends_at DATETIME NOT NULL,
-          average_time DATETIME NOT NULL,
-          hits INTEGER DEFAULT 1
-        );
-      SQL
-
-      db.exec "CREATE INDEX IF NOT EXISTS punchable_index ON punches (punchable_type, punchable_id);"
-      db.exec "CREATE INDEX IF NOT EXISTS average_time_index ON punches (average_time);"
-    end
-    true
-  end
-
   def self.run(command : String)
     case command
     when "setup"
       setup
     else
-      false
+      puts "Unknown command '#{command}'"
+      help
     end
+  end
+
+  def self.setup
+    setup_path = "./bin/punching_bag.cr"
+    FileUtils.mkdir_p("./bin")
+
+    unless File.exists?(setup_path)
+      File.write(setup_path, <<-CODE)
+#!/usr/bin/env crystal
+
+require "punching_bag"
+
+if ARGV.size > 0
+PunchingBag::CLI.run(ARGV[0])
+end
+      CODE
+      puts "Setup complete. File created at #{setup_path}"
+    else
+      puts "Setup already completed."
+    end
+
+    # Exit after setup to prevent further execution errors
+    exit 0
+  end
+
+  def self.help
+    puts "PunchingBag CLI Commands:"
+    puts "  setup - Initialize required files and directories"
   end
 end
