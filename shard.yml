@@ -1,0 +1,25 @@
+name: punching_bag
+version: 0.1.0
+authors:
+  - Daniel Calixto calixtodaniel@gmail.com
+
+description: |
+  A Crystal shard for tracking and analyzing hit counts, trending items, and time-based analytics.
+scripts:
+  postinstall: crystal run scripts/install.cr
+
+dependencies:
+  db:
+    github: crystal-lang/crystal-db
+  sqlite3:
+    github: crystal-lang/crystal-sqlite3
+  pg:
+    github: will/crystal-pg
+  mysql:
+    github: crystal-lang/crystal-mysql
+
+development_dependencies:
+  webmock:
+    github: manastech/webmock.cr
+
+license: MIT
