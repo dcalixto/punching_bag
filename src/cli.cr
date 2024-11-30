@@ -1,4 +1,5 @@
 require "./punching_bag"
+require "file_utils"
 
 class PunchingBag::CLI
   def self.run(command : String)
