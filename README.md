@@ -113,17 +113,21 @@ Here’s an example of integrating Punching Bag into an application.
 
 ```crystal
 require "punching_bag"
+require "db/serializable"
 class Article
-   property id : Int32
+ include DB::Serializable
+   @@db : DB::Database = DB.open("sqlite3:./db/development.db")
+
+   property id : Int64
    property title : String
 
   def track_view
-    bag = PunchingBag.new
-    bag.punch("Article", id)
+    bag = PunchingBag.new(@@db)
+    bag.punch("Post", id.not_nil!)
   end
 
   def total_views
-    bag = PunchingBag.new
+    bag = PunchingBag.new(@@db)
     bag.total_hits("Article", id)
   end
 end
