@@ -17,7 +17,7 @@ A Crystal shard for tracking and analyzing hit counts, trending items, and time-
 
 ## Installation
 
-1. Add PunchingBag to your `shard.yml`:
+1. Add Punching Bag to your `shard.yml`:
 
 ```yaml
 dependencies:
@@ -31,10 +31,16 @@ dependencies:
 shards install
 ```
 
-3. Run setup:
+3. Run the setup command:
 
 ```crystal
-  crystal run bin/punching_bag.cr -- setup
+crystal run bin/punching_bag.cr -- setup
+```
+
+If the setup has already been completed, you will see the following message in your terminal:
+
+```crystal
+Setup already completed.
 ```
 
 ## Usage
@@ -45,9 +51,7 @@ Import the library
 require "punching_bag"
 ```
 
-Basic Hit Tracking
-
-# Initialize
+# Initialize the Bag
 
 ```crystal
 bag = PunchingBag.new
@@ -97,23 +101,18 @@ Get average time for hits
 avg_time = bag.average_time("Article", 1)
 ```
 
-## Configuration
-
-```crystal
-PunchingBag.configure do |config|
-   config.database_url = "sqlite3:///custom/path/database.db"
-end
-```
-
 Clear all recorded hits
 
 ```crystal
 bag.clear
 ```
 
-Example Integration
+# Example Integration
+
+Here’s an example of integrating Punching Bag into an application.
 
 ```crystal
+require "punching_bag"
 class Article
    property id : Int32
    property title : String
@@ -124,11 +123,34 @@ class Article
   end
 
   def total_views
-     bag = PunchingBag.new
+    bag = PunchingBag.new
     bag.total_hits("Article", id)
   end
 end
 
+```
+
+The Routes
+
+```crystal
+get "/articles/:id" do |env|
+  if article = Article.find(env.params.url["id"].to_i64)
+    article.track_view
+    render "article/show.ecr"
+  else
+    env.redirect "/articles"
+  end
+end
+```
+
+View
+
+To display the total view count in your view, use the following HTML:
+
+```crystal
+<div class="views-count">
+  Views: <%= article.total_views %>
+</div>
 ```
 
 ## Development

@@ -47,13 +47,18 @@ class PunchingBag
     @db = DB.open(database_url)
   end
 
-  def punch(punchable_type : String, punchable_id : Int32, hits : Int32 = 1, timestamp : Time = Time.utc)
+  # def punch(punchable_type : String, punchable_id : Int32, hits : Int32 = 1, timestamp : Time = Time.utc)
+  #   @db.exec("INSERT INTO punches (punchable_id, punchable_type, starts_at, ends_at, average_time, hits)
+  #              VALUES (?, ?, ?, ?, ?, ?)",
+  #     punchable_id, punchable_type, timestamp, timestamp + 1.hour, timestamp, hits)
+  # end
+  def punch(punchable_type : String, punchable_id : Int64, hits : Int32 = 1, timestamp : Time = Time.utc)
     @db.exec("INSERT INTO punches (punchable_id, punchable_type, starts_at, ends_at, average_time, hits)
                VALUES (?, ?, ?, ?, ?, ?)",
       punchable_id, punchable_type, timestamp, timestamp + 1.hour, timestamp, hits)
   end
 
-  def average_time(punchable_type : String, punchable_id : Int32) : Time
+  def average_time(punchable_type : String, punchable_id : Int64) : Time
     result = @db.query_all(
       "SELECT starts_at, hits FROM punches WHERE punchable_type = ? AND punchable_id = ?",
       punchable_type, punchable_id,
@@ -70,7 +75,7 @@ class PunchingBag
     Time.unix(total_time // total_hits)
   end
 
-  def total_hits(punchable_type : String, punchable_id : Int32) : Int32
+  def total_hits(punchable_type : String, punchable_id : Int64) : Int64
     result = @db.scalar("SELECT SUM(hits) FROM punches WHERE punchable_type = ? AND punchable_id = ?", punchable_type, punchable_id)
 
     case result
@@ -87,7 +92,7 @@ class PunchingBag
     end
   end
 
-  def most_hit(since : Time, limit : Int32 = 5) : Array(NamedTuple(punchable_type: String, punchable_id: Int32, total_hits: Int32))
+  def most_hit(since : Time, limit : Int64 = 5) : Array(NamedTuple(punchable_type: String, punchable_id: Int64, total_hits: Int64))
     @db.query_all(
       "SELECT punchable_type, punchable_id, SUM(hits) as total_hits
        FROM punches
@@ -97,7 +102,7 @@ class PunchingBag
        LIMIT ?",
       since,
       limit,
-      as: {punchable_type: String, punchable_id: Int32, total_hits: Int32}
+      as: {punchable_type: String, punchable_id: Int64, total_hits: Int64}
     )
   end
 
