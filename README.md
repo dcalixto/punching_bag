@@ -51,7 +51,7 @@ Import the library
 require "punching_bag"
 ```
 
-# Initialize the Bag
+## Initialize the Bag
 
 ```crystal
 bag = PunchingBag.new
@@ -75,7 +75,7 @@ Record hit with timestamp
 bag.punch("Article", 1, timestamp: Time.utc - 1.day)
 ```
 
-# Analytics
+## Analytics
 
 Get total hits for an item
 
@@ -107,7 +107,7 @@ Clear all recorded hits
 bag.clear
 ```
 
-# Example Integration
+## Example Integration
 
 Here’s an example of integrating Punching Bag into an application.
 
@@ -170,6 +170,10 @@ crystal spec
 3. Commit your changes (`git commit -am 'Add feature'`)
 4. Push to the branch (`git push origin my-feature`)
 5. Create a new Pull Request
+
+## Contributors
+
+Daniel Calixto - creator and maintainer
 
 ## License
 
