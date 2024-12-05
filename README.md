@@ -123,8 +123,13 @@ Here’s an example of integrating Punching Bag into an application.
 ```crystal
 require "punching_bag"
 require "db/serializable"
+
 class Article
  include DB::Serializable
+
+   property id : Int64
+   property title : String
+
   def self.db=(database : DB::Database)
     @@db = database
   end
@@ -133,11 +138,7 @@ class Article
     @@db.not_nil!
   end
 
-
-   property id : Int64
-   property title : String
-
-def track_view
+  def track_view
     bag = PunchingBag.new(@@db.not_nil!)
     bag.punch("Article", id.not_nil!)
   end
