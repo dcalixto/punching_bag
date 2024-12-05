@@ -1,5 +1,4 @@
 require "db"
-require "sqlite3"
 
 class PunchingBag
   class Configuration
