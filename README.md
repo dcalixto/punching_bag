@@ -125,19 +125,31 @@ require "punching_bag"
 require "db/serializable"
 class Article
  include DB::Serializable
-   @@db : DB::Database = DB.open("sqlite3:./db/development.db")
+  def self.db=(database : DB::Database)
+    @@db = database
+  end
+
+  def self.db
+    @@db.not_nil!
+  end
+
 
    property id : Int64
    property title : String
 
-  def track_view
-    bag = PunchingBag.new(@@db)
-    bag.punch("Post", id.not_nil!)
+def track_view
+    bag = PunchingBag.new(@@db.not_nil!)
+    bag.punch("Article", id.not_nil!)
   end
 
   def total_views
-    bag = PunchingBag.new(@@db)
-    bag.total_hits("Article", id)
+    bag = PunchingBag.new(@@db.not_nil!)
+    bag.total_hits("Article", id.not_nil!)
+  end
+
+  def self.trending(since = Time.utc - 1.week, limit = 10)
+    bag = PunchingBag.new(@@db.not_nil!)
+    bag.most_hit(since, limit: limit)
   end
 end
 
