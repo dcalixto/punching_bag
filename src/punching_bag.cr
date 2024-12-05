@@ -1,10 +1,17 @@
 require "db"
 
 class PunchingBag
-  @db : DB::Database
+  @@db : DB::Database? = nil
 
-  def initialize(db : DB::Database)
-    @db = db
+  def self.db
+    @@db.not_nil!
+  end
+
+  def self.db=(database : DB::Database)
+    @@db = database
+  end
+
+  def initialize(@db : DB::Database = @@db.not_nil!)
     setup_database
   end
 

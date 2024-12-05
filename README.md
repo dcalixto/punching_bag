@@ -51,6 +51,15 @@ Import the library
 require "punching_bag"
 ```
 
+**_Then in your application code, you can set it up like:_**
+
+Initialize database connection
+
+```crystal
+database = DB.open(DATABASE_URL)
+PunchingBag.db = database
+```
+
 ## Initialize the Bag
 
 ```crystal
