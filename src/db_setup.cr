@@ -1,12 +1,14 @@
 require "db"
 
 class PunchingBag
-  class Configuration
-    class_property database_url : String = ENV["DATABASE_URL"]? || "sqlite3://./punching_bag.db"
+  @@db : DB::Database? = nil
+
+  def self.db
+    @@db || raise "Database connection not set. Call PunchingBag.db = your_database_connection first"
   end
 
-  def self.configure
-    yield Configuration
+  def self.db=(connection : DB::Database)
+    @@db = connection
   end
 end
 
