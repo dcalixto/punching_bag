@@ -58,8 +58,10 @@ class PunchingBag
   end
 
   def total_hits(punchable_type : String, punchable_id : Int64) : Int64
-    result = @db.scalar("SELECT SUM(hits) FROM punches WHERE punchable_type = ? AND punchable_id = ?", punchable_type, punchable_id)
-
+    result = @db.scalar(
+      "SELECT SUM(hits) FROM punches WHERE punchable_type = $1 AND punchable_id = $2",
+      punchable_type, punchable_id
+    )
     case result
     when Int64
       result
