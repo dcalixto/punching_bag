@@ -2,13 +2,13 @@ class CreatePunches < DB::Migration
   def up
     execute <<-SQL
       CREATE TABLE punches (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        punchable_id INTEGER NOT NULL,
-        punchable_type TEXT NOT NULL,
-        starts_at DATETIME NOT NULL,
-        ends_at DATETIME NOT NULL,
-        average_time DATETIME NOT NULL,
-        hits INTEGER NOT NULL DEFAULT 1
+        id BIGSERIAL PRIMARY KEY,
+        punchable_id BIGINT NOT NULL,
+        punchable_type VARCHAR NOT NULL,
+        starts_at TIMESTAMP NOT NULL,
+        ends_at TIMESTAMP NOT NULL,
+        average_time TIMESTAMP NOT NULL,
+        hits INTEGER DEFAULT 1
       );
 
       CREATE INDEX punchable_index 

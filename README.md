@@ -4,6 +4,8 @@
 
 A Crystal shard for tracking and analyzing hit counts, trending items, and time-based analytics.
 
+[![Crystal Test](https://github.com/dcalixto/punching_bag/actions/workflows/crystal-test.yml/badge.svg?branch=master)](https://github.com/dcalixto/punching_bag/actions/workflows/crystal-test.yml)
+
 ## Features
 
 - Total hit count tracking

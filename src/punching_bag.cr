@@ -18,12 +18,12 @@ class PunchingBag
   private def setup_database
     @db.exec <<-SQL
       CREATE TABLE IF NOT EXISTS punches (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        punchable_id INTEGER NOT NULL,
+        id BIGSERIAL PRIMARY KEY,
+        punchable_id BIGINT NOT NULL,
         punchable_type TEXT NOT NULL,
-        starts_at DATETIME NOT NULL,
-        ends_at DATETIME NOT NULL,
-        average_time DATETIME NOT NULL,
+        starts_at TIMESTAMP NOT NULL,
+        ends_at TIMESTAMP NOT NULL,
+        average_time TIMESTAMP NOT NULL,
         hits INTEGER DEFAULT 1
       );
     SQL
@@ -32,15 +32,12 @@ class PunchingBag
     @db.exec "CREATE INDEX IF NOT EXISTS average_time_index ON punches (average_time);"
   end
 
-  # def punch(punchable_type : String, punchable_id : Int32, hits : Int32 = 1, timestamp : Time = Time.utc)
-  #   @db.exec("INSERT INTO punches (punchable_id, punchable_type, starts_at, ends_at, average_time, hits)
-  #              VALUES (?, ?, ?, ?, ?, ?)",
-  #     punchable_id, punchable_type, timestamp, timestamp + 1.hour, timestamp, hits)
-  # end
   def punch(punchable_type : String, punchable_id : Int64, hits : Int32 = 1, timestamp : Time = Time.utc)
-    @db.exec("INSERT INTO punches (punchable_id, punchable_type, starts_at, ends_at, average_time, hits)
-               VALUES (?, ?, ?, ?, ?, ?)",
-      punchable_id, punchable_type, timestamp, timestamp + 1.hour, timestamp, hits)
+    @db.exec(
+      "INSERT INTO punches (punchable_id, punchable_type, starts_at, ends_at, average_time, hits)
+       VALUES ($1, $2, $3, $4, $5, $6)",
+      args: [punchable_id, punchable_type, timestamp, timestamp + 1.hour, timestamp, hits]
+    )
   end
 
   def average_time(punchable_type : String, punchable_id : Int64) : Time
