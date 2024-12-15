@@ -18,7 +18,7 @@ jobs:
         env:
           POSTGRES_PASSWORD: postgres
           POSTGRES_USER: postgres
-          POSTGRES_DB: crystal_pg_test
+          POSTGRES_DB: punching_bag_test
         ports:
           - 5432:5432
         options: >-
@@ -44,5 +44,5 @@ jobs:
 
       - name: Run specs
         env:
-          DATABASE_URL: postgres://postgres:postgres@localhost:5432/crystal_pg_test
+          DATABASE_URL: postgres://postgres:postgres@localhost:5432/punching_bag_test # Correct username
         run: crystal spec

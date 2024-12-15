@@ -6,4 +6,8 @@ module PunchingBag
   def self.configure
     yield Configuration
   end
+
+  def self.db : DB::Database
+    DB.open(Configuration.database_url)
+  end
 end

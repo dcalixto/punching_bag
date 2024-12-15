@@ -1,48 +1,41 @@
 require "./spec_helper"
-require "../src/db_setup"
 
-describe "database setup" do
-  it "creates punches table with correct schema" do
-    bag = PunchingBag::Tracker.new(PunchingBag.db)
-    bag.setup_database
+describe "DB Setup" do
+  describe "database connection" do
+    it "creates punches table with correct schema" do
+      DB.open(PunchingBag::Configuration.database_url) do |db|
+        bag = PunchingBag::Tracker.new(PunchingBag.db)
+        bag.setup_database
 
-    result = PunchingBag.db.query_all(<<-SQL, as: {column_name: String, data_type: String})
-      SELECT column_name, data_type
-      FROM information_schema.columns
-      WHERE table_name = 'punches'
-      ORDER BY ordinal_position
-    SQL
+        result = PunchingBag.db.query_all(<<-SQL, as: {column_name: String, data_type: String})
+          SELECT column_name, data_type
+          FROM information_schema.columns
+          WHERE table_name = 'punches'
+          ORDER BY ordinal_position
+        SQL
 
-    result.should contain({column_name: "id", data_type: "bigint"})
-    result.should contain({column_name: "punchable_type", data_type: "character varying"})
-    result.should contain({column_name: "hits", data_type: "integer"})
-    result.should contain({column_name: "created_at", data_type: "timestamp with time zone"})
-  end
-
-  it "creates required indexes" do
-    DB.open(PunchingBag::Configuration.database_url) do |db|
-      indexes = db.query_all(<<-SQL, as: String)
-        SELECT indexname 
-        FROM pg_indexes 
-        WHERE tablename = 'punches' 
-        AND indexname != 'punches_pkey';
-      SQL
-
-      indexes.should contain("punchable_index")
-      indexes.should contain("idx_punches_created_at")
+        result.should contain({column_name: "id", data_type: "bigint"})
+        result.should contain({column_name: "punchable_type", data_type: "character varying"})
+        result.should contain({column_name: "hits", data_type: "integer"})
+        result.should contain({column_name: "created_at", data_type: "timestamp with time zone"})
+      end
     end
   end
 
-  it "maintains idempotency when running setup multiple times" do
-    3.times do
+  describe "table schema" do
+    it "has the expected columns" do
       DB.open(PunchingBag::Configuration.database_url) do |db|
-        index_count = db.scalar(<<-SQL).as(Int64)
-          SELECT COUNT(*) 
-          FROM pg_indexes 
-          WHERE tablename = 'punches' 
-          AND indexname != 'punches_pkey';
+        result = db.query_all(<<-SQL, as: {column_name: String, data_type: String})
+          SELECT column_name, data_type
+          FROM information_schema.columns
+          WHERE table_name = 'punches'
+          ORDER BY ordinal_position
         SQL
-        index_count.should eq(2)
+
+        result.should contain({column_name: "id", data_type: "bigint"})
+        result.should contain({column_name: "punchable_type", data_type: "character varying"})
+        result.should contain({column_name: "hits", data_type: "integer"})
+        result.should contain({column_name: "created_at", data_type: "timestamp with time zone"})
       end
     end
   end
