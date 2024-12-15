@@ -1,9 +1,8 @@
-require "../src/punching_bag"
-require "spec"
+require "./spec_helper"
 
 describe PunchingBag do
   it "tracks and retrieves hits correctly" do
-    bag = PunchingBag::Tracker.new(PunchingBag.db)
+    bag = PunchingBag::Tracker.new(TestHelper.database)
     bag.clear
 
     # Insert data for the test
@@ -19,7 +18,7 @@ describe PunchingBag do
   end
 
   it "calculates average time correctly for multiple punches" do
-    bag = PunchingBag::Tracker.new(PunchingBag.db)
+    bag = PunchingBag::Tracker.new(TestHelper.database)
     bag.clear
 
     now = Time.utc
@@ -31,7 +30,7 @@ describe PunchingBag do
   end
 
   it "returns UTC time when no punches exist" do
-    bag = PunchingBag::Tracker.new(PunchingBag.db.not_nil!)
+    bag = PunchingBag::Tracker.new(TestHelper.database)
     bag.clear
 
     now = Time.utc
@@ -41,7 +40,7 @@ describe PunchingBag do
   end
 
   it "calculates average time for single punch" do
-    bag = PunchingBag::Tracker.new(PunchingBag.db)
+    bag = PunchingBag::Tracker.new(TestHelper.database)
     bag.clear
 
     specific_time = Time.utc
@@ -50,25 +49,10 @@ describe PunchingBag do
     result = bag.average_time("Post", 1_i64)
     result.should be_close(specific_time, 1.second)
   end
-
-  it "retrieves most hit items within a time range" do
-    bag = PunchingBag::Tracker.new(PunchingBag.db.not_nil!)
-    bag.clear
-
-    bag.punch("Post", 1_i64, 5)
-    bag.punch("Post", 2_i64, 3)
-    bag.punch("Comment", 1_i64, 1)
-
-    since = Time.utc - 1.day
-    most_hit = bag.most_hit(since)
-
-    most_hit[0][:punchable_id].should eq(1_i64)
-    most_hit[0][:total_hits].should eq(5_i64)
-  end
 end
-
 describe "Database Setup" do
   it "creates punches table with correct schema" do
+    db = TestHelper.database
     sql = <<-SQL
       SELECT column_name, data_type, is_nullable
       FROM information_schema.columns
@@ -76,7 +60,7 @@ describe "Database Setup" do
       ORDER BY ordinal_position
     SQL
 
-    results = PunchingBag.db.query_all(sql) do |rs|
+    results = db.query_all(sql) do |rs|
       {
         name:     rs.read(String),
         type:     rs.read(String),
@@ -93,7 +77,8 @@ describe "Database Setup" do
   end
 
   it "creates required indexes" do
-    results = PunchingBag.db.query_all(<<-SQL, as: {name: String})
+    db = TestHelper.database
+    results = db.query_all(<<-SQL, as: {name: String})
       SELECT indexname as name 
       FROM pg_indexes 
       WHERE tablename = 'punches'

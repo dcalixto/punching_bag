@@ -1,30 +1,34 @@
 require "spec"
-require "webmock"
 require "../src/punching_bag"
+require "./test_helper"
 
-ENV["DATABASE_URL"] = "postgres://localhost/punching_bag_test" # Or a different test database
-
-module TestHelper
-  # DB_URL = "postgres://daniel:password@localhost/punching_bag_test"
-  @@database : DB::Database? = nil
-
-  def self.database
-    @@database ||= DB.open(ENV["DATABASE_URL"]? || "postgres://postgres:postgres@localhost:5432/punching_bag_test")
-  end
-
-  def self.setup_database
-    @@database = DB.open(ENV["DATABASE_URL"]? || "postgres://postgres:postgres@localhost:5432/punching_bag_test")
-    PunchingBag.db = database
-    database.exec "DROP TABLE IF EXISTS punches CASCADE" # Assuming this is your table
-  end
-
-  def self.cleanup_database
-    @@database.try &.close
-    @@database = nil
-  end
+PunchingBag.configure do |config|
+  config.database_url = "postgres://postgres:postgres@localhost:5432/punching_bag_test"
 end
 
-Spec.before_suite { TestHelper.setup_database }
-Spec.after_suite { TestHelper.cleanup_database }
-# Mocking setup
-WebMock.allow_net_connect = false
+Spec.before_each do
+  TestHelper.database.exec "DROP TABLE IF EXISTS punches"
+
+  TestHelper.database.exec <<-SQL
+    CREATE TABLE punches (
+      id BIGSERIAL PRIMARY KEY,
+      punchable_type VARCHAR(255),
+      punchable_id BIGINT,
+      hits INTEGER DEFAULT 1,
+      created_at TIMESTAMP WITH TIME ZONE,
+      starts_at TIMESTAMP WITH TIME ZONE,
+      ends_at TIMESTAMP WITH TIME ZONE
+    )
+  SQL
+
+  TestHelper.database.exec <<-SQL
+    CREATE INDEX punchable_index ON punches (punchable_type, punchable_id)
+  SQL
+
+  TestHelper.database.exec <<-SQL
+    CREATE INDEX idx_punches_created_at ON punches (created_at)
+  SQL
+end
+Spec.after_suite do
+  TestHelper.database.close
+end
