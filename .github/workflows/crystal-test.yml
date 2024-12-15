@@ -43,4 +43,6 @@ jobs:
         run: shards install
 
       - name: Run specs
+        env:
+          DATABASE_URL: postgres://postgres:postgres@localhost:5432/crystal_pg_test
         run: crystal spec
