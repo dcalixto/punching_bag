@@ -2,15 +2,17 @@
 
 ![Punch Bag](./src/punching-bag.gif)
 
-A Crystal shard for tracking and analyzing hit counts, trending items, and time-based analytics.
+A Crystal shard for tracking and analyzing hit counts, trending items, time and location analytics for PostgreSQL.
 
 [![Crystal Test](https://github.com/dcalixto/punching_bag/actions/workflows/crystal-test.yml/badge.svg?branch=master)](https://github.com/dcalixto/punching_bag/actions/workflows/crystal-test.yml)
 
 ## Features
 
-- Total hit count tracking
-- Most hit items tracking
-- Time-based hit analytics
+- Timezone-aware tracking using PostgreSQL's TIMESTAMPTZ
+- Location-based analytics support
+- Configurable hit counting
+- Time-based popularity tracking
+- Efficient indexing for fast queries
 - Lightweight and fast
 
 ## Requirements
@@ -58,32 +60,41 @@ require "punching_bag"
 Initialize database connection
 
 ```crystal
-database = DB.open(DATABASE_URL)
-PunchingBag.db = database
+PunchingBag.configure do |config|
+  config.database_url = "postgres://localhost/your_database"
+end
 ```
 
-## Initialize the Bag
+## Initialize the tracker
 
 ```crystal
-bag = PunchingBag.new
+# Initialize tracker
+tracker = PunchingBag::Tracker.new(PunchingBag.db)
 ```
 
 Record a hit
 
 ```crystal
-bag.punch("Article", 1)
+tracker.punch("Article", 1)
+```
+
+Track hits with custom timestamp and timezone
+
+```crystal
+timestamp = Time.local(timezone: Time::Location.load("America/New_York"))
+tracker.punch("Article", 1, hits: 1, timestamp: timestamp)
 ```
 
 Record multiple hits
 
 ```crystal
-bag.punch("Article", 1, hits: 5)
+tracker.punch("Article", 1, hits: 5)
 ```
 
 Record hit with timestamp
 
 ```crystal
-bag.punch("Article", 1, timestamp: Time.utc - 1.day)
+tracker.punch("Article", 1, timestamp: Time.utc - 1.day)
 ```
 
 ## Analytics
@@ -91,31 +102,31 @@ bag.punch("Article", 1, timestamp: Time.utc - 1.day)
 Get total hits for an item
 
 ```crystal
-total = bag.total_hits("Article", 1)
+total = tracker.total_hits("Article", 1)
 ```
 
 Get most hit items since last week
 
 ```crystal
-trending = bag.most_hit(Time.utc - 1.week)
+trending = tracker.most_hit(Time.utc - 1.week)
 ```
 
 Get top 10 most hit items since last month
 
 ```crystal
-top_items = bag.most_hit(Time.utc - 1.month, limit: 10)
+top_items = tracker.most_hit(Time.utc - 1.month, limit: 10)
 ```
 
 Get average time for hits
 
 ```crystal
-avg_time = bag.average_time("Article", 1)
+avg_time = tracker.average_time("Article", 1)
 ```
 
 Clear all recorded hits
 
 ```crystal
-bag.clear
+tracker.clear
 ```
 
 ## Example Integration
@@ -141,18 +152,18 @@ class Article
   end
 
   def track_view
-    bag = PunchingBag.new(@@db.not_nil!)
-    bag.punch("Article", id.not_nil!)
+    tracker = PunchingBag.new(@@db.not_nil!)
+    tracker.punch("Article", id.not_nil!)
   end
 
   def total_views
-    bag = PunchingBag.new(@@db.not_nil!)
-    bag.total_hits("Article", id.not_nil!)
+    tracker = PunchingBag.new(@@db.not_nil!)
+    tracker.total_hits("Article", id.not_nil!)
   end
 
   def self.trending(since = Time.utc - 1.week, limit = 10)
-    bag = PunchingBag.new(@@db.not_nil!)
-    bag.most_hit(since, limit: limit)
+    tracker = PunchingBag.new(@@db.not_nil!)
+    tracker.most_hit(since, limit: limit)
   end
 end
 
@@ -202,24 +213,3 @@ Daniel Calixto - creator and maintainer
 ## License
 
 MIT License. See LICENSE for details.
-
-## TODO
-
-Run the setup as follows:
-
-```crystal
-require "./punching_bag/setup"
-
-PunchingBag::Setup.run
-```
-
-## Output Example:
-
-```crystal
-Setting up development database...
-Database already exists.
-Creating tables and indexes...
-Punches table created or already exists.
-Indexes created or already exist.
-Setup completed successfully.
-```
