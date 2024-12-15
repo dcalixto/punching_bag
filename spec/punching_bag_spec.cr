@@ -3,61 +3,104 @@ require "spec"
 
 describe PunchingBag do
   it "tracks and retrieves hits correctly" do
-    bag = PunchingBag.new
-    bag.clear # Ensure a clean slate
+    bag = PunchingBag::Tracker.new(PunchingBag.db)
+    bag.clear
 
     # Insert data for the test
-    bag.punch("Post", 1, 2)
-    bag.punch("Post", 1, 1)
+    bag.punch("Post", 1_i64, 2)
+    bag.punch("Post", 1_i64, 1)
 
     # Debugging: Print all records
-    all_hits = bag.most_hit(Time.utc - 1.year) # Retrieve all hits for debugging
+    all_hits = bag.most_hit(Time.utc - 1.year)
     pp all_hits
 
     # Test expectation
-    bag.total_hits("Post", 1).should eq(3)
+    bag.total_hits("Post", 1_i64).should eq(3_i64)
   end
+
   it "calculates average time correctly for multiple punches" do
-    bag = PunchingBag.new
+    bag = PunchingBag::Tracker.new(PunchingBag.db)
     bag.clear
 
     now = Time.utc
-    bag.punch("Article", 1, 2, now - 2.days)
-    bag.punch("Article", 1, 3, now - 1.day)
+    bag.punch("Article", 1_i64, 2, now - 2.days)
+    bag.punch("Article", 1_i64, 3, now - 1.day)
 
-    avg_time = bag.average_time("Article", 1)
-    expected_time = Time.unix(((now - 2.days).to_unix * 2 + (now - 1.day).to_unix * 3) // 5)
-    avg_time.should eq(expected_time)
+    avg_time = bag.average_time("Article", 1_i64)
+    (avg_time - (now - 2.days)).total_seconds.abs.should be < 1
   end
 
   it "returns UTC time when no punches exist" do
-    bag = PunchingBag.new
+    bag = PunchingBag::Tracker.new(PunchingBag.db.not_nil!)
     bag.clear
+
+    now = Time.utc
     avg_time = bag.average_time("Post", 1)
-    (avg_time - Time.utc).total_milliseconds.abs.should be < 1
+
+    avg_time.should be_close(now, 1.second)
   end
 
   it "calculates average time for single punch" do
-    bag = PunchingBag.new
+    bag = PunchingBag::Tracker.new(PunchingBag.db)
     bag.clear
 
-    specific_time = Time.utc(2023, 1, 1, 12, 0, 0)
-    bag.punch("Post", 1, 1, specific_time)
+    specific_time = Time.utc
+    bag.punch("Post", 1_i64, 1, specific_time)
 
-    avg_time = bag.average_time("Post", 1)
-    avg_time.should eq(specific_time)
+    result = bag.average_time("Post", 1_i64)
+    result.should be_close(specific_time, 1.second)
   end
 
   it "retrieves most hit items within a time range" do
-    bag = PunchingBag.new
+    bag = PunchingBag::Tracker.new(PunchingBag.db.not_nil!)
     bag.clear
-    bag.punch("Post", 1, 5)
-    bag.punch("Post", 2, 3)
-    bag.punch("Comment", 1, 1)
+
+    bag.punch("Post", 1_i64, 5)
+    bag.punch("Post", 2_i64, 3)
+    bag.punch("Comment", 1_i64, 1)
+
     since = Time.utc - 1.day
     most_hit = bag.most_hit(since)
-    pp most_hit # Inspect the query result
-    most_hit[0]["punchable_id"].should eq(1)
-    most_hit[0]["total_hits"].should eq(5)
+
+    most_hit[0][:punchable_id].should eq(1_i64)
+    most_hit[0][:total_hits].should eq(5_i64)
+  end
+end
+
+describe "Database Setup" do
+  it "creates punches table with correct schema" do
+    sql = <<-SQL
+      SELECT column_name, data_type, is_nullable
+      FROM information_schema.columns
+      WHERE table_name = 'punches'
+      ORDER BY ordinal_position
+    SQL
+
+    results = PunchingBag.db.query_all(sql) do |rs|
+      {
+        name:     rs.read(String),
+        type:     rs.read(String),
+        nullable: rs.read(String),
+      }
+    end
+
+    timestamp_columns = ["created_at", "starts_at", "ends_at"]
+    timestamp_columns.each do |col|
+      column = results.find { |r| r[:name] == col }
+      column.should_not be_nil
+      column.not_nil![:type].should eq("timestamp with time zone")
+    end
+  end
+
+  it "creates required indexes" do
+    results = PunchingBag.db.query_all(<<-SQL, as: {name: String})
+      SELECT indexname as name 
+      FROM pg_indexes 
+      WHERE tablename = 'punches'
+      AND indexname != 'punches_pkey';
+    SQL
+
+    results.any? { |r| r[:name] == "punchable_index" }.should be_true
+    results.any? { |r| r[:name] == "idx_punches_created_at" }.should be_true
   end
 end

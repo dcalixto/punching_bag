@@ -202,3 +202,24 @@ Daniel Calixto - creator and maintainer
 ## License
 
 MIT License. See LICENSE for details.
+
+## TODO
+
+Run the setup as follows:
+
+```crystal
+require "./punching_bag/setup"
+
+PunchingBag::Setup.run
+```
+
+## Output Example:
+
+```crystal
+Setting up development database...
+Database already exists.
+Creating tables and indexes...
+Punches table created or already exists.
+Indexes created or already exist.
+Setup completed successfully.
+```

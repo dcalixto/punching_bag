@@ -1,62 +1,50 @@
 require "db"
+require "pg"
 
-class PunchingBag
-  @@db : DB::Database? = nil
+module PunchingBag::Setup
+  DATABASE_URL = ENV["DATABASE_URL"]? || "postgres://localhost/punching_bag_development"
 
-  def self.db
-    @@db || raise "Database connection not set. Call PunchingBag.db = your_database_connection first"
+  def self.run
+    puts "Setting up development database..."
+    setup_development_db
+    puts "Creating tables and indexes..."
+    setup_tables
+    puts "Setup completed successfully"
   end
 
-  def self.db=(connection : DB::Database)
-    @@db = connection
+  private def self.setup_development_db
+    DB.open("postgres://localhost/postgres") do |db|
+      begin
+        db.exec "CREATE DATABASE punching_bag_development"
+      rescue e : DB::Error
+        puts "Database might already exist: #{e.message}"
+      end
+    end
+  end
+
+  private def self.setup_tables
+    DB.open(DATABASE_URL) do |db|
+      create_punches_table(db)
+      create_indexes(db)
+    end
+  end
+
+  private def self.create_punches_table(db)
+    db.exec <<-SQL
+      CREATE TABLE IF NOT EXISTS punches (
+        id BIGSERIAL PRIMARY KEY,
+        punchable_type VARCHAR(255),
+        punchable_id BIGINT,
+        hits INTEGER DEFAULT 1,
+        created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+        starts_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+        ends_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+      )
+    SQL
+  end
+
+  private def self.create_indexes(db)
+    db.exec "CREATE INDEX IF NOT EXISTS idx_punches_punchable ON punches (punchable_type, punchable_id)"
+    db.exec "CREATE INDEX IF NOT EXISTS idx_punches_created_at ON punches (created_at)"
   end
 end
-
-# Database connection
-DB.open(PunchingBag::Configuration.database_url) do |db|
-  db.exec <<-SQL
-    CREATE TABLE IF NOT EXISTS punches (
-      id BIGSERIAL PRIMARY KEY,
-      punchable_id BIGINT NOT NULL,
-      punchable_type VARCHAR NOT NULL,
-      starts_at TIMESTAMP NOT NULL,
-      ends_at TIMESTAMP NOT NULL,
-      average_time TIMESTAMP NOT NULL,
-      hits INTEGER DEFAULT 1
-    );
-  SQL
-
-  db.exec <<-SQL
-    CREATE INDEX IF NOT EXISTS punchable_index
-    ON punches (punchable_type, punchable_id);
-  SQL
-
-  db.exec <<-SQL
-    CREATE INDEX IF NOT EXISTS average_time_index
-    ON punches (average_time);
-  SQL
-end
-# Database connection
-# DB.open(PunchingBag::Configuration.database_url) do |db|
-#   db.exec <<-SQL
-#     CREATE TABLE IF NOT EXISTS punches (
-#       id BIGSERIAL PRIMARY KEY,
-#       punchable_id BIGINT NOT NULL,
-#       punchable_type VARCHAR NOT NULL,
-#       starts_at TIMESTAMP NOT NULL,
-#       ends_at TIMESTAMP NOT NULL,
-#       average_time TIMESTAMP NOT NULL,
-#       hits BIGINT DEFAULT 1
-#     );
-#   SQL
-
-#   db.exec <<-SQL
-#     CREATE INDEX IF NOT EXISTS punchable_index
-#     ON punches (punchable_type, punchable_id);
-#   SQL
-
-#   db.exec <<-SQL
-#     CREATE INDEX IF NOT EXISTS average_time_index
-#     ON punches (average_time);
-#   SQL
-# end

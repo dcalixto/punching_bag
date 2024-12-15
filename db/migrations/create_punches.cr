@@ -3,19 +3,19 @@ class CreatePunches < DB::Migration
     execute <<-SQL
       CREATE TABLE punches (
         id BIGSERIAL PRIMARY KEY,
-        punchable_id BIGINT NOT NULL,
-        punchable_type VARCHAR NOT NULL,
-        starts_at TIMESTAMP NOT NULL,
-        ends_at TIMESTAMP NOT NULL,
-        average_time TIMESTAMP NOT NULL,
-        hits INTEGER DEFAULT 1
+        punchable_type VARCHAR(255),
+        punchable_id BIGINT,
+        hits INTEGER DEFAULT 1,
+        created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+        starts_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+        ends_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
       );
 
       CREATE INDEX punchable_index 
       ON punches (punchable_type, punchable_id);
 
-      CREATE INDEX average_time_index
-      ON punches (average_time);
+      CREATE INDEX created_at_index
+      ON punches (created_at);
     SQL
   end
 
@@ -23,7 +23,7 @@ class CreatePunches < DB::Migration
     execute <<-SQL
       DROP TABLE IF EXISTS punches;
       DROP INDEX IF EXISTS punchable_index;
-      DROP INDEX IF EXISTS average_time_index;
+      DROP INDEX IF EXISTS created_at_index;
     SQL
   end
 end

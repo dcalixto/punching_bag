@@ -10,3 +10,6 @@ shards:
   webmock:
     git: https://github.com/manastech/webmock.cr.git
     version: 0.14.0
+  pg:
+    git: https://github.com/will/crystal-pg.git
+    version: 0.29.0

@@ -11,11 +11,10 @@ scripts:
 dependencies:
   db:
     github: crystal-lang/crystal-db
-
+  pg:
+    github: will/crystal-pg
 development_dependencies:
   webmock:
     github: manastech/webmock.cr
-  sqlite3:
-    github: crystal-lang/crystal-sqlite3
 
 license: MIT

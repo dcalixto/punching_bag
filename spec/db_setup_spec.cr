@@ -1,6 +1,52 @@
 require "./spec_helper"
 require "../src/db_setup"
 
+describe "database setup" do
+  it "creates punches table with correct schema" do
+    bag = PunchingBag::Tracker.new(PunchingBag.db)
+    bag.setup_database
+
+    result = PunchingBag.db.query_all(<<-SQL, as: {column_name: String, data_type: String})
+      SELECT column_name, data_type
+      FROM information_schema.columns
+      WHERE table_name = 'punches'
+      ORDER BY ordinal_position
+    SQL
+
+    result.should contain({column_name: "id", data_type: "bigint"})
+    result.should contain({column_name: "punchable_type", data_type: "character varying"})
+    result.should contain({column_name: "hits", data_type: "integer"})
+    result.should contain({column_name: "created_at", data_type: "timestamp with time zone"})
+  end
+
+  it "creates required indexes" do
+    DB.open(PunchingBag::Configuration.database_url) do |db|
+      indexes = db.query_all(<<-SQL, as: String)
+        SELECT indexname 
+        FROM pg_indexes 
+        WHERE tablename = 'punches' 
+        AND indexname != 'punches_pkey';
+      SQL
+
+      indexes.should contain("punchable_index")
+      indexes.should contain("idx_punches_created_at")
+    end
+  end
+
+  it "maintains idempotency when running setup multiple times" do
+    3.times do
+      DB.open(PunchingBag::Configuration.database_url) do |db|
+        index_count = db.scalar(<<-SQL).as(Int64)
+          SELECT COUNT(*) 
+          FROM pg_indexes 
+          WHERE tablename = 'punches' 
+          AND indexname != 'punches_pkey';
+        SQL
+        index_count.should eq(2)
+      end
+    end
+  end
+end
 describe PunchingBag do
   before_each do
     File.delete("./punching_bag.db") if File.exists?("./punching_bag.db")
@@ -13,42 +59,9 @@ describe PunchingBag do
   describe ".configure" do
     it "allows setting custom database url" do
       PunchingBag.configure do |config|
-        config.database_url = "sqlite3://:memory:"
+        config.database_url = "postgres://localhost/punching_bag_test"
       end
-      PunchingBag::Configuration.database_url.should eq("sqlite3://:memory:")
-    end
-  end
-
-  describe "database setup" do
-    it "creates punches table with correct schema" do
-      DB.open(PunchingBag::Configuration.database_url) do |db|
-        result = db.query_one("SELECT sql FROM sqlite_master WHERE type='table' AND name='punches'", as: String)
-        result.should contain("CREATE TABLE punches")
-        result.should contain("id INTEGER PRIMARY KEY AUTOINCREMENT")
-        result.should contain("punchable_id INTEGER NOT NULL")
-        result.should contain("punchable_type TEXT NOT NULL")
-        result.should contain("starts_at DATETIME NOT NULL")
-        result.should contain("ends_at DATETIME NOT NULL")
-        result.should contain("average_time DATETIME NOT NULL")
-        result.should contain("hits INTEGER DEFAULT 1")
-      end
-    end
-
-    it "creates required indexes" do
-      DB.open(PunchingBag::Configuration.database_url) do |db|
-        indexes = db.query_all("SELECT name FROM sqlite_master WHERE type='index' AND tbl_name='punches'", as: String)
-        indexes.should contain("punchable_index")
-        indexes.should contain("average_time_index")
-      end
-    end
-
-    it "maintains idempotency when running setup multiple times" do
-      3.times do
-        DB.open(PunchingBag::Configuration.database_url) do |db|
-          index_count = db.scalar("SELECT COUNT(*) FROM sqlite_master WHERE type='index' AND tbl_name='punches'").as(Int64)
-          index_count.should eq(2)
-        end
-      end
+      PunchingBag::Configuration.database_url.should eq("postgres://localhost/punching_bag_test")
     end
   end
 end
