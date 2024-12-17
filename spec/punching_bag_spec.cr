@@ -1,7 +1,12 @@
 require "./spec_helper"
+require "./test_helper"
 
 describe PunchingBag do
-  it "tracks and retrieves hits correctly" do
+  before_each do
+    TestHelper.setup_test_db
+  end
+
+  it "tracks hits" do
     bag = PunchingBag::Tracker.new(TestHelper.database)
     bag.clear
 
@@ -76,16 +81,17 @@ describe "Database Setup" do
     end
   end
 
-  it "creates required indexes" do
-    db = TestHelper.database
-    results = db.query_all(<<-SQL, as: {name: String})
-      SELECT indexname as name 
-      FROM pg_indexes 
-      WHERE tablename = 'punches'
-      AND indexname != 'punches_pkey';
-    SQL
-
-    results.any? { |r| r[:name] == "punchable_index" }.should be_true
-    results.any? { |r| r[:name] == "idx_punches_created_at" }.should be_true
+  describe "Database Setup" do
+    it "creates required indexes" do
+      results = [] of NamedTuple(name: String)
+      DB.open(DB_URL) do |db|
+        db.query "SELECT indexname as name FROM pg_indexes WHERE tablename = 'punches'" do |rs|
+          rs.each do
+            results << {name: rs.read(String)}
+          end
+        end
+      end
+      results.any? { |r| r[:name] == "idx_punches_created_at" }.should be_true
+    end
   end
 end

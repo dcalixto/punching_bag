@@ -1,34 +1,29 @@
 require "spec"
+require "webmock"
 require "../src/punching_bag"
-require "./test_helper"
+require "db"
+require "pg"
+require "micrate"
 
-PunchingBag.configure do |config|
-  config.database_url = "postgres://postgres:postgres@localhost:5432/punching_bag_test"
-end
+DB_URL = "postgres://postgres:postgres@localhost:5432/punching_bag_test"
 
 Spec.before_each do
-  TestHelper.database.exec "DROP TABLE IF EXISTS punches"
+  WebMock.reset
 
-  TestHelper.database.exec <<-SQL
-    CREATE TABLE punches (
-      id BIGSERIAL PRIMARY KEY,
-      punchable_type VARCHAR(255),
-      punchable_id BIGINT,
-      hits INTEGER DEFAULT 1,
-      created_at TIMESTAMP WITH TIME ZONE,
-      starts_at TIMESTAMP WITH TIME ZONE,
-      ends_at TIMESTAMP WITH TIME ZONE
-    )
-  SQL
+  # Clean database first
+  DB.open(DB_URL) do |db|
+    db.exec "DROP TABLE IF EXISTS punches"
+    db.exec "DROP TABLE IF EXISTS micrate_db_version"
+  end
 
-  TestHelper.database.exec <<-SQL
-    CREATE INDEX punchable_index ON punches (punchable_type, punchable_id)
-  SQL
-
-  TestHelper.database.exec <<-SQL
-    CREATE INDEX idx_punches_created_at ON punches (created_at)
-  SQL
+  # Run migrations
+  Micrate::DB.connection_url = DB_URL
+  Micrate::Cli.run_up
 end
-Spec.after_suite do
-  TestHelper.database.close
+
+PunchingBag.configure do |config|
+  config.database_url = DB_URL
+  config.db = DB.open(DB_URL)
 end
+
+# No need to run migrations down since we're dropping tables in before_each

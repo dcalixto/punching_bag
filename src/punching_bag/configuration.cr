@@ -1,21 +1,24 @@
 module PunchingBag
   class Configuration
-    @@db : DB::Database? = nil
+    property database_url : String = "postgres://postgres:postgres@localhost:5432/punching_bag_test"
+    property db : DB::Database?
 
-    def self.db : DB::Database
-      @@db ||= DB.open(ENV["DATABASE_URL"])
+    @@config = Configuration.new
+
+    def self.configure
+      yield @@config
     end
 
-    def self.db=(database : DB::Database)
-      @@db = database
+    def self.config
+      @@config
     end
-  end
 
-  def self.configure
-    yield Configuration
-  end
+    def self.database_url
+      @@config.database_url
+    end
 
-  def self.db
-    Configuration.db
+    def self.db
+      @@config.db
+    end
   end
 end

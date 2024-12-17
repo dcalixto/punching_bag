@@ -1,17 +1,13 @@
 require "db"
 require "pg"
+require "./punching_bag/version"
 require "./punching_bag/configuration"
+require "./punching_bag/tracker"
 require "./punching_bag/cli"
 
 module PunchingBag
-  @@db : DB::Database? = nil
-
-  def self.db
-    @@db.not_nil!
-  end
-
-  def self.db=(database : DB::Database)
-    @@db = database
+  def self.configure
+    yield Configuration.config
   end
 
   class Tracker

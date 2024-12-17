@@ -1,4 +1,4 @@
--- +micrate Up
+# +micrate Up
 CREATE TABLE punches (
   id BIGSERIAL PRIMARY KEY,
   punchable_type VARCHAR(255),
@@ -14,5 +14,5 @@ CREATE INDEX idx_punches_punchable ON punches(punchable_type, punchable_id);
 CREATE INDEX idx_punches_starts_at ON punches(starts_at);
 CREATE INDEX idx_punches_ends_at ON punches(ends_at);
 
--- +micrate Down
+# +micrate Down
 DROP TABLE IF EXISTS punches CASCADE;
