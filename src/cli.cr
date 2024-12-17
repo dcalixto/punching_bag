@@ -1,5 +1,6 @@
 require "./punching_bag"
 require "file_utils"
+require "db"
 require "micrate"
 require "pg"
 
