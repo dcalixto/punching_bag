@@ -44,9 +44,27 @@ module PunchingBag::CLI
 end
 
 # Replace the setup_logger method with this simpler version
-def self.setup_logger
-  Micrate.logger = {
-    info:  ->(msg : String) { puts msg },
-    error: ->(msg : String) { STDERR.puts msg },
-  }
-end
+# def self.setup_logger
+#   Micrate.logger = {
+#     info:  ->(msg : String) { puts msg },
+#     error: ->(msg : String) { STDERR.puts msg },
+#   }
+# end
+
+CREATE_PUNCHES_MIGRATION = <<-SQL
+-- +micrate Up
+CREATE TABLE punches (
+  id BIGSERIAL PRIMARY KEY,
+  punchable_type VARCHAR(255),
+  punchable_id BIGINT,
+  hits INTEGER DEFAULT 1,
+  created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_punches_type_id ON punches(punchable_type, punchable_id);
+CREATE INDEX idx_punches_created_at ON punches(created_at);
+
+-- +micrate Down
+DROP TABLE IF EXISTS punches;
+SQL
