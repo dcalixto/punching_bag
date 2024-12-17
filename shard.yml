@@ -13,6 +13,9 @@ dependencies:
     github: crystal-lang/crystal-db
   pg:
     github: will/crystal-pg
+  micrate:
+    github: amberframework/micrate
+
 development_dependencies:
   webmock:
     github: manastech/webmock.cr
