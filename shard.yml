@@ -13,10 +13,10 @@ dependencies:
     github: crystal-lang/crystal-db
   pg:
     github: will/crystal-pg
-  micrate:
-    github: amberframework/micrate
   logger:
     github: crystal-lang/logger.cr
+  micrate:
+    github: amberframework/micrate
 
 development_dependencies:
   webmock:

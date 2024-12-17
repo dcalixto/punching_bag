@@ -1,11 +1,13 @@
 module PunchingBag
   class Configuration
-    class_property database_url : String = "postgres://postgres:postgres@localhost:5432/punching_bag_test"
+    @@db : DB::Database? = nil
 
-    @@db : DB::Database?
+    def self.db : DB::Database
+      @@db ||= DB.open(ENV["DATABASE_URL"])
+    end
 
-    def self.db
-      @@db ||= DB.open(database_url)
+    def self.db=(database : DB::Database)
+      @@db = database
     end
   end
 
