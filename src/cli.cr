@@ -28,7 +28,7 @@ module PunchingBag::CLI
       puts "Created migration at #{migration_file}"
 
       Micrate::DB.connect
-      Micrate::Cli.run_up
+      Micrate::Cli.run
       puts "Migration completed successfully"
     else
       puts "Migration already exists at #{migration_file}"
@@ -41,4 +41,12 @@ module PunchingBag::CLI
     puts "PunchingBag CLI Commands:"
     puts " setup - Initialize required files and directories"
   end
+end
+
+# Replace the setup_logger method with this simpler version
+def self.setup_logger
+  Micrate.logger = {
+    info:  ->(msg : String) { puts msg },
+    error: ->(msg : String) { STDERR.puts msg },
+  }
 end
