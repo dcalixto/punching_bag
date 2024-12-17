@@ -1,6 +1,6 @@
 require "./punching_bag"
 require "file_utils"
-require "./db/migrations/create_punches"
+require "../../db/migrations/create_punches"
 
 class PunchingBag::CLI
   def self.run(command : String)
