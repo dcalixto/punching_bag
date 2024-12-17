@@ -16,3 +16,6 @@ shards:
   micrate:
     git: https://github.com/amberframework/micrate.git
     version: 0.3.3
+  logger:
+    git: https://github.com/crystal-lang/logger.cr.git
+    version: 0.1.0

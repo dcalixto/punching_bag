@@ -4,6 +4,10 @@ shards:
     git: https://github.com/crystal-lang/crystal-db.git
     version: 0.13.1
 
+  logger:
+    git: https://github.com/crystal-lang/logger.cr.git
+    version: 0.1.0
+
   micrate:
     git: https://github.com/amberframework/micrate.git
     version: 0.3.3
