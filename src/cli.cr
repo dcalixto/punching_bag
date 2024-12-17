@@ -1,6 +1,7 @@
 require "./punching_bag"
 require "file_utils"
-require "crystal-db"
+require "db"
+require "pg"
 
 module PunchingBag::CLI
   extend self
