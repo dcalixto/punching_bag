@@ -38,7 +38,7 @@ shards install
 3. Run the setup command:
 
 ```crystal
-crystal run bin/punching_bag.cr -- setup
+crystal run bin/micrate.cr -- up
 ```
 
 If the setup has already been completed, you will see the following message in your terminal:
