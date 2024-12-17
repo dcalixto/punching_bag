@@ -43,14 +43,6 @@ module PunchingBag::CLI
   end
 end
 
-# Replace the setup_logger method with this simpler version
-# def self.setup_logger
-#   Micrate.logger = {
-#     info:  ->(msg : String) { puts msg },
-#     error: ->(msg : String) { STDERR.puts msg },
-#   }
-# end
-
 CREATE_PUNCHES_MIGRATION = <<-SQL
 -- +micrate Up
 CREATE TABLE punches (
