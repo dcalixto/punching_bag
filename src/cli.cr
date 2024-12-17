@@ -1,8 +1,10 @@
 require "./punching_bag"
 require "file_utils"
 
-class PunchingBag::CLI
-  def self.run(command : String)
+module PunchingBag::CLI
+  extend self
+
+  def run(command : String)
     case command
     when "setup"
       setup
@@ -12,7 +14,7 @@ class PunchingBag::CLI
     end
   end
 
-  def self.setup
+  def setup
     migrations_path = File.join(File.dirname(__FILE__), "..", "db", "migrations")
     migration_file = File.join(migrations_path, "create_punches.cr")
 
@@ -22,7 +24,6 @@ class PunchingBag::CLI
       File.write(migration_file, CREATE_PUNCHES_MIGRATION)
       puts "Created migration at #{migration_file}"
 
-      # Create and run migration directly
       migration = CreatePunches.new
       migration.up
       puts "Migration completed successfully"
@@ -33,12 +34,11 @@ class PunchingBag::CLI
     exit 0
   end
 
-  def self.help
+  def help
     puts "PunchingBag CLI Commands:"
     puts " setup - Initialize required files and directories"
   end
 
-  # Define the migration class right here
   class CreatePunches < DB::Migration
     def up
       execute <<-SQL
