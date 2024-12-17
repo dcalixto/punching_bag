@@ -14,8 +14,14 @@ shards:
     git: https://github.com/will/crystal-pg.git
     version: 0.29.0
   micrate:
-    git: https://github.com/amberframework/micrate.git
-    version: 0.3.3
+    git: https://github.com/dcalixto/micrate.git
+    version: 0.15.1+git.commit.244fbf68e97647ba0c34d25f448c285ffa0142f6
   logger:
-    git: https://github.com/crystal-lang/logger.cr.git
-    version: 0.1.0
+    git: https://github.com/dcalixto/logger.cr.git
+    version: 0.1.0+git.commit.5954a5e4e5b49f5af7a9705411cf28c3f1751e40
+  mysql:
+    git: https://github.com/crystal-lang/crystal-mysql.git
+    version: 0.16.0
+  spectator:
+    git: https://gitlab.com/arctic-fox/spectator.git
+    version: 0.12.1

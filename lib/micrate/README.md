@@ -11,13 +11,13 @@ Micrate currently supports migrations for Postgres, Mysql and SQLite3, but it sh
 To install the standalone binary tool check out the releases page, or use homebrew:
 
 ```
-$ brew tap juanedi/micrate
+$ brew tap amberframework/micrate
 $ brew install micrate
 ```
 
-Execute `micrate help` for usage instructions. Micrate will connect to the database specified by the `DB_URL` environment variable.
+Execute `micrate help` for usage instructions. Micrate will connect to the database specified by the `DATABASE_URL` environment variable.
 
-To create a new migration use the `create` subcommand. For example, `micrate create add_users_table` will create a new SQL migration file with a name such as `db/migrations/20160524162446_add_users_table.sql` that looks like this:
+To create a new migration use the `scaffold` subcommand. For example, `micrate scaffold add_users_table` will create a new SQL migration file with a name such as `db/migrations/20160524162446_add_users_table.sql` that looks like this:
 
 ```sql
 -- +micrate Up
@@ -37,6 +37,7 @@ CREATE TABLE users(id INT PRIMARY KEY, email VARCHAR NOT NULL);
 -- +micrate Down
 DROP TABLE users;
 ```
+
 Now run it using `micrate up`. This command will execute all pending migrations:
 
 ```
@@ -93,7 +94,7 @@ To use the Crystal API, add this to your application's `shard.yml`:
 ```yaml
 dependencies:
   micrate:
-    github: juanedi/micrate
+    github: dcalixto/micrate
 ```
 
 This allows you to programatically use micrate's features. You'll see the `Micrate` module has an equivalent for every CLI command. If you need to use micrate's CLI without installing the tool (which could be convenient in a CI environment), you can write a runner script as follows:
@@ -114,7 +115,7 @@ Micrate::Cli.run
 
 ## Contributing
 
-1. Fork it ( https://github.com/juanedi/micrate/fork )
+1. Fork it ( https://github.com/dcalixto/micrate/fork )
 2. Create your feature branch (git checkout -b my-new-feature)
 3. Commit your changes (git commit -am 'Add some feature')
 4. Push to the branch (git push origin my-new-feature)
@@ -122,4 +123,4 @@ Micrate::Cli.run
 
 ## Contributors
 
-- [juanedi](https://github.com/juanedi)  - creator, maintainer
+- [juanedi](https://github.com/juanedi) - creator, maintainer

@@ -1,10 +1,40 @@
 name: micrate
-version: 0.3.3
+version: 0.15.1
+crystal: ">= 0.36.1, < 2.0.0"
 
 authors:
   - Juan Edi <jedi11235@gmail.com>
-  - Amber Team <amberframework.org>
+
+maintainers:
+  - Isaac Sloan <isaac@isaacsloan.com>
+  - Dru Jensen <drujensen@gmail.com>
+
+targets:
+  micrate:
+    main: src/micrate-bin.cr
+
+scripts:
+  postinstall: shards build
+
+executables:
+  - micrate
 
 dependencies:
   db:
     github: crystal-lang/crystal-db
+
+  pg:
+    github: will/crystal-pg
+
+  logger:
+    github: dcalixto/logger.cr
+
+development_dependencies:
+  mysql:
+    github: crystal-lang/crystal-mysql
+
+  sqlite3:
+    github: crystal-lang/crystal-sqlite3
+
+  spectator:
+    gitlab: arctic-fox/spectator

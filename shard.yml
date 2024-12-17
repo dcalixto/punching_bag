@@ -14,9 +14,7 @@ dependencies:
   pg:
     github: will/crystal-pg
   micrate:
-    github: amberframework/micrate
-  logger:
-    github: crystal-lang/logger.cr
+    github: dcalixto/micrate
 
 development_dependencies:
   webmock:

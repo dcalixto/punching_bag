@@ -1,7 +1,9 @@
+require "log"
+
 require "./micrate/*"
 
 module Micrate
-  @@logger : Logger?
+  Log = ::Log.for(self)
 
   def self.db_dir
     "db"
@@ -24,6 +26,11 @@ module Micrate
   def self.up(db)
     all_migrations = migrations_by_version
 
+    if all_migrations.size == 0
+      Log.warn { "No migrations found!" }
+      return
+    end
+
     current = dbversion(db)
     target = all_migrations.keys.sort.last
     migrate(all_migrations, current, target, db)
@@ -43,8 +50,9 @@ module Micrate
     current = dbversion(db)
     previous = previous_version(current, all_migrations.keys)
 
-    migrate(all_migrations, current, previous, db)
-    migrate(all_migrations, previous, current, db)
+    if migrate(all_migrations, current, previous, db) == :success
+      migrate(all_migrations, previous, current, db)
+    end
   end
 
   def self.migration_status(db) : Hash(Migration, Time?)
@@ -95,32 +103,37 @@ module Micrate
     plan = migration_plan(status, current, target, direction)
 
     if plan.empty?
-      logger.info "No migrations to run. current version: #{current}"
-      return
+      Log.info { "No migrations to run. current version: #{current}" }
+      return :nop
     end
 
-    logger.info "Migrating db, current version: #{current}, target: #{target}"
+    Log.info { "Migrating db, current version: #{current}, target: #{target}" }
 
     plan.each do |version|
       migration = all_migrations[version]
-      begin
+
+      # Wrap migration in a transaction
+      db.transaction do |tx|
         migration.statements(direction).each do |stmt|
-          DB.exec(stmt, db)
+          tx.connection.exec(stmt)
         end
 
-        DB.record_migration(migration, direction, db)
+        DB.record_migration(migration, direction, tx.connection)
 
-        logger.info "OK   #{migration.name}"
+        tx.commit
+        Log.info { "OK   #{migration.name}" }
       rescue e : Exception
-        logger.info "An error ocurred executing migration #{migration.version}. Error message is: #{e.message}"
-        return
+        tx.rollback
+        Log.error(exception: e) { "An error occurred executing migration #{migration.version}." }
+        return :error
       end
     end
+    :success
   end
 
   private def self.verify_unordered_migrations(current, status : Hash(Int, Bool))
     migrations = status.select { |version, is_applied| !is_applied && version < current }
-                       .keys
+      .keys
 
     if !migrations.empty?
       raise UnorderedMigrationsException.new(migrations)
@@ -143,30 +156,12 @@ module Micrate
     end
   end
 
-  private def self.fix_timestamp_collisions(migrations)
-    migrations.map_with_index do |migration, index|
-      count = migrations.count { |this_migration| this_migration.version == migration.version }
-      if count > 1
-        collision_path = File.join(Micrate.migrations_dir, migration.name)
-        new_name = migration.name.split("_")
-        new_version = new_name.shift.to_i64 + index
-        new_path = File.join(Micrate.migrations_dir, "#{new_version}_" + new_name.join("_"))
-        File.rename(collision_path, new_path)
-        migration.version = new_version
-        migration
-      else
-        migration
-      end
-    end
-  end
-
   private def self.migrations_by_version
-    migrations = Dir.entries(migrations_dir)
-                    .select { |name| File.file? File.join("db/migrations", name) }
-                    .select { |name| /^\d+_.+\.sql$/ =~ name }
-                    .map { |name| Migration.from_file(name) }
-    migrations_without_collisions = fix_timestamp_collisions(migrations)
-    migrations_without_collisions.index_by { |migration| migration.version }
+    Dir.entries(migrations_dir)
+      .select { |name| File.file? File.join(migrations_dir, name) }
+      .select { |name| /^\d+.+\.sql$/ =~ name }
+      .map { |name| Migration.from_file(name) }
+      .index_by { |migration| migration.version }
   end
 
   def self.migration_plan(status : Hash(Migration, Time?), current : Int, target : Int, direction)
@@ -182,13 +177,13 @@ module Micrate
 
     if direction == :forward
       all_versions.keys
-                  .sort
-                  .select { |v| v > current && v <= target }
+        .sort
+        .select { |v| v > current && v <= target }
     else
       all_versions.keys
-                  .sort
-                  .reverse
-                  .select { |v| v <= current && v > target }
+        .sort
+        .reverse
+        .select { |v| v <= current && v > target }
     end
   end
 
@@ -210,16 +205,6 @@ module Micrate
     end
 
     return 0
-  end
-
-  def self.logger
-    @@logger ||= Logger.new(STDOUT).tap do |l|
-      l.level = Logger::UNKNOWN
-    end
-  end
-
-  def self.logger=(logger)
-    @@logger = logger
   end
 
   class UnorderedMigrationsException < Exception
