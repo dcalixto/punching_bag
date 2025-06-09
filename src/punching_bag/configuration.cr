@@ -1,16 +1,16 @@
 module PunchingBag
   class Configuration
-    property database_url : String = "postgres://postgres:postgres@localhost:5432/punching_bag_test"
+    property database_url : String = ENV["DATABASE_URL"]? || "postgres://localhost/punching_bag_development"
     property db : DB::Database?
 
-    @@config = Configuration.new
+    @@config = nil
 
     def self.configure
       yield @@config
     end
 
     def self.config
-      @@config
+      @@config ||= Configuration.new
     end
 
     def self.database_url
