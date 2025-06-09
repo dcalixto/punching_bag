@@ -6,6 +6,7 @@ pipeline {
             steps {
                 sh '''
                   apt-get update
+                  apt-get update && apt-get install -y postgresql postgresql-contrib
                   apt-get install -y curl gnupg apt-transport-https
                   curl -fsSL https://crystal-lang.org/install.sh | bash
                   apt-get install -y crystal
@@ -19,6 +20,8 @@ pipeline {
         stage('Dependencies') {
             steps {
                 sh 'shards install'
+                sh 'su - postgres -c "createuser -s root"'
+                sh 'su - postgres -c "createdb test_punching_bag"'
             }
         }
         
