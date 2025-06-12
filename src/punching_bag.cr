@@ -74,49 +74,15 @@ module PunchingBag
       @db.exec(sql)
     end
 
-    # def punch(punchable_type : String, punchable_id : Int64 | Int32, hits : Int32 = 1, timestamp : Time = Time.utc)
-    #   # Convert Int32 to Int64 if needed
-    #   id = punchable_id.to_i64
-
-    #   @db.exec(
-    #     "INSERT INTO punches (punchable_id, punchable_type, created_at, starts_at, ends_at, hits)
-    #      VALUES ($1, $2, $3, $4, $5, $6)",
-    #     args: [id, punchable_type, timestamp, timestamp, timestamp + 1.hour, hits]
-    #   )
-    # end
     def punch(punchable_type : String, punchable_id : Int64 | Int32, hits : Int32 = 1, timestamp : Time = Time.utc)
+      # Convert Int32 to Int64 if needed
       id = punchable_id.to_i64
-      sql = <<-SQL
-    INSERT INTO punches (
-      punchable_type, 
-      punchable_id, 
-      hits,
-      created_at,
-      starts_at,
-      ends_at
-    ) VALUES ($1, $2, $3, $4, $5, $6)
-  SQL
 
-      args = [
-        punchable_type,     # 1: String
-        id,                 # 2: Int64
-        hits,               # 3: Int32
-        timestamp,          # 4: Time
-        timestamp,          # 5: Time (starts_at)
-        timestamp + 1.hour, # 6: Time (ends_at)
-      ]
-
-      # Log detalhado
-      Log.debug { "Executando: #{sql} com args: #{args}" }
-
-      begin
-        @db.exec(sql, args: args)
-        Log.info { "Punch registrado para #{punchable_type} ##{id}" }
-        true
-      rescue ex : DB::Error
-        Log.error(exception: ex) { "FALHA no INSERT: #{ex.message}" }
-        false
-      end
+      @db.exec(
+        "INSERT INTO punches (punchable_id, punchable_type, created_at, starts_at, ends_at, hits)
+         VALUES ($1, $2, $3, $4, $5, $6)",
+        args: [id, punchable_type, timestamp, timestamp, timestamp + 1.hour, hits]
+      )
     end
 
     def total_hits(punchable_type : String, punchable_id : Int64 | Int32) : Int64

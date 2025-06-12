@@ -3,6 +3,7 @@ module PunchingBag
     getter db : DB::Database
 
     def initialize(@db : DB::Database)
+      Log.debug { "Inicializando PunchingBag::Tracker" }
       setup_database
     end
 
@@ -16,38 +17,26 @@ module PunchingBag
 
     def setup_table
       sql = <<-SQL
-        CREATE TABLE IF NOT EXISTS punches (
-          id BIGSERIAL PRIMARY KEY,
-          punchable_type VARCHAR(255),
-          punchable_id BIGINT,
-          hits INTEGER DEFAULT 1,
-          created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-          starts_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-          ends_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-        )
-      SQL
+    CREATE TABLE IF NOT EXISTS punches (
+      id BIGSERIAL PRIMARY KEY,
+      punchable_type VARCHAR(255),
+      punchable_id BIGINT,
+      hits INTEGER DEFAULT 1,
+      created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+      starts_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+      ends_at TIMESTAMPTZ DEFAULT (CURRENT_TIMESTAMP + INTERVAL '1 hour')
+    )
+  SQL
 
       @db.exec(sql)
     end
 
-    # def punch(punchable_type : String, punchable_id : Int64 | Int32, hits : Int32 = 1, timestamp : Time = Time.utc)
-    #   # Convert Int32 to Int64 if needed
-    #   id = punchable_id.to_i64
-
-    #   @db.exec(
-    #     "INSERT INTO punches (punchable_id, punchable_type, created_at, starts_at, ends_at, hits)
-    #      VALUES ($1, $2, $3, $4, $5, $6)",
-    #     args: [id, punchable_type, timestamp, timestamp, timestamp + 1.hour, hits]
-    #   )
-    # end
-
-    # Em punching_bag/tracker.cr
     def punch(punchable_type : String, punchable_id : Int64 | Int32, hits : Int32 = 1, timestamp : Time = Time.utc)
       id = punchable_id.to_i64
       sql = <<-SQL
     INSERT INTO punches (
-      punchable_type, 
-      punchable_id, 
+      punchable_type,  -- Ordem correta: tipo primeiro
+      punchable_id,    -- ID segundo
       hits,
       created_at,
       starts_at,
@@ -64,7 +53,6 @@ module PunchingBag
         timestamp + 1.hour, # 6: Time (ends_at)
       ]
 
-      # Log detalhado
       Log.debug { "Executando: #{sql} com args: #{args}" }
 
       begin
