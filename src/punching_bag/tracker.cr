@@ -47,7 +47,7 @@ module PunchingBag
       sql = <<-SQL
     INSERT INTO punches (
       punchable_type, 
-      punchable_id,   
+      punchable_id, 
       hits,
       created_at,
       starts_at,
@@ -64,13 +64,16 @@ module PunchingBag
         timestamp + 1.hour, # 6: Time (ends_at)
       ]
 
+      # Log detalhado
       Log.debug { "Executando: #{sql} com args: #{args}" }
 
       begin
         @db.exec(sql, args: args)
         Log.info { "Punch registrado para #{punchable_type} ##{id}" }
-      rescue ex
-        Log.error(exception: ex) { "FALHA: #{ex.message}" }
+        true
+      rescue ex : DB::Error
+        Log.error(exception: ex) { "FALHA no INSERT: #{ex.message}" }
+        false
       end
     end
 
