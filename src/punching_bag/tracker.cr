@@ -30,15 +30,46 @@ module PunchingBag
       @db.exec(sql)
     end
 
-    def punch(punchable_type : String, punchable_id : Int64 | Int32, hits : Int32 = 1, timestamp : Time = Time.utc)
-      # Convert Int32 to Int64 if needed
-      id = punchable_id.to_i64
+    # def punch(punchable_type : String, punchable_id : Int64 | Int32, hits : Int32 = 1, timestamp : Time = Time.utc)
+    #   # Convert Int32 to Int64 if needed
+    #   id = punchable_id.to_i64
 
-      @db.exec(
-        "INSERT INTO punches (punchable_id, punchable_type, created_at, starts_at, ends_at, hits)
-         VALUES ($1, $2, $3, $4, $5, $6)",
-        args: [id, punchable_type, timestamp, timestamp, timestamp + 1.hour, hits]
-      )
+    #   @db.exec(
+    #     "INSERT INTO punches (punchable_id, punchable_type, created_at, starts_at, ends_at, hits)
+    #      VALUES ($1, $2, $3, $4, $5, $6)",
+    #     args: [id, punchable_type, timestamp, timestamp, timestamp + 1.hour, hits]
+    #   )
+    # end
+
+    # Em punching_bag/tracker.cr
+    def punch(punchable_type : String, punchable_id : Int64 | Int32, hits : Int32 = 1, timestamp : Time = Time.utc)
+      id = punchable_id.to_i64
+      query = <<-SQL
+    INSERT INTO punches (
+      punchable_type, punchable_id, hits, created_at, 
+      starts_at, ends_at,  
+    ) VALUES ($1, $2, $3, $4, $5, $6)
+  SQL
+
+      args = [
+        punchable_type,
+        id,
+        hits,
+        timestamp,
+        timestamp,          # starts_at
+        timestamp + 1.hour, # ends_at
+      ]
+
+      Log.debug { "Executando: #{query} com args: #{args}" }
+
+      begin
+        @db.exec(query, args: args)
+        Log.info { "Punch registrado para #{punchable_type} ##{id}" }
+      rescue ex
+        Log.error(exception: ex) {
+          "FALHA no INSERT para #{punchable_type} ##{id}: #{ex.message}"
+        }
+      end
     end
 
     def total_hits(punchable_type : String, punchable_id : Int64 | Int32) : Int64
@@ -49,7 +80,7 @@ module PunchingBag
         "SELECT SUM(hits) FROM punches WHERE punchable_type = $1 AND punchable_id = $2",
         punchable_type, id
       )
-      
+
       case result
       when Int64
         result
