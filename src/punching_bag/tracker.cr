@@ -44,31 +44,33 @@ module PunchingBag
     # Em punching_bag/tracker.cr
     def punch(punchable_type : String, punchable_id : Int64 | Int32, hits : Int32 = 1, timestamp : Time = Time.utc)
       id = punchable_id.to_i64
-      query = <<-SQL
+      sql = <<-SQL
     INSERT INTO punches (
-      punchable_type, punchable_id, hits, created_at, 
-      starts_at, ends_at,  
+      punchable_type, 
+      punchable_id,   
+      hits,
+      created_at,
+      starts_at,
+      ends_at
     ) VALUES ($1, $2, $3, $4, $5, $6)
   SQL
 
       args = [
-        punchable_type,
-        id,
-        hits,
-        timestamp,
-        timestamp,          # starts_at
-        timestamp + 1.hour, # ends_at
+        punchable_type,     # 1: String
+        id,                 # 2: Int64
+        hits,               # 3: Int32
+        timestamp,          # 4: Time
+        timestamp,          # 5: Time (starts_at)
+        timestamp + 1.hour, # 6: Time (ends_at)
       ]
 
-      Log.debug { "Executando: #{query} com args: #{args}" }
+      Log.debug { "Executando: #{sql} com args: #{args}" }
 
       begin
-        @db.exec(query, args: args)
+        @db.exec(sql, args: args)
         Log.info { "Punch registrado para #{punchable_type} ##{id}" }
       rescue ex
-        Log.error(exception: ex) {
-          "FALHA no INSERT para #{punchable_type} ##{id}: #{ex.message}"
-        }
+        Log.error(exception: ex) { "FALHA: #{ex.message}" }
       end
     end
 
