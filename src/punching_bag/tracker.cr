@@ -1,6 +1,13 @@
 module PunchingBag
   class Tracker
     getter db : DB::Database
+    
+    # Singleton pattern to avoid repeated initializations
+    @@instance : Tracker? = nil
+    
+    def self.instance(db : DB::Database) : Tracker
+      @@instance ||= new(db)
+    end
 
     def initialize(@db : DB::Database)
       Log.debug { "Inicializando PunchingBag::Tracker" }
@@ -65,6 +72,44 @@ module PunchingBag
       end
     end
 
+    # Batch punch multiple items at once for better performance
+    def batch_punch(items : Array(NamedTuple(type: String, id: Int64 | Int32, hits: Int32)))
+      return true if items.empty?
+      
+      timestamp = Time.utc
+      
+      sql = <<-SQL
+        INSERT INTO punches (punchable_type, punchable_id, hits, created_at, starts_at, ends_at)
+        VALUES 
+      SQL
+      
+      values = [] of String
+      args = [] of DB::Any
+      
+      items.each_with_index do |item, index|
+        base = index * 6
+        values << "($#{base + 1}, $#{base + 2}, $#{base + 3}, $#{base + 4}, $#{base + 5}, $#{base + 6})"
+        
+        args << item[:type]
+        args << item[:id].to_i64
+        args << item[:hits]
+        args << timestamp
+        args << timestamp
+        args << timestamp + 1.hour
+      end
+      
+      sql += values.join(", ")
+      
+      begin
+        @db.exec(sql, args: args)
+        Log.info { "Batch punch registrado para #{items.size} items" }
+        true
+      rescue ex : DB::Error
+        Log.error(exception: ex) { "FALHA no batch INSERT: #{ex.message}" }
+        false
+      end
+    end
+
     def total_hits(punchable_type : String, punchable_id : Int64 | Int32) : Int64
       # Convert Int32 to Int64 if needed
       id = punchable_id.to_i64
@@ -105,9 +150,92 @@ module PunchingBag
 
       @db.query_all(sql, args: [since, limit], as: {punchable_type: String, punchable_id: Int64, total_hits: Int64})
     end
+    
+    # Get trending items with the highest growth rate in hits
+    def trending(days : Int32 = 7, limit : Int32 = 10)
+      sql = <<-SQL
+        WITH recent_hits AS (
+          SELECT 
+            punchable_type, 
+            punchable_id, 
+            SUM(hits) as recent_total 
+          FROM punches 
+          WHERE created_at >= $1
+          GROUP BY punchable_type, punchable_id
+        ),
+        older_hits AS (
+          SELECT 
+            punchable_type, 
+            punchable_id, 
+            SUM(hits) as older_total 
+          FROM punches 
+          WHERE created_at >= $2 AND created_at < $1
+          GROUP BY punchable_type, punchable_id
+        )
+        SELECT 
+          r.punchable_type, 
+          r.punchable_id, 
+          r.recent_total as recent_hits,
+          COALESCE(o.older_total, 0) as older_hits,
+          r.recent_total - COALESCE(o.older_total, 0) as growth
+        FROM recent_hits r
+        LEFT JOIN older_hits o ON r.punchable_type = o.punchable_type AND r.punchable_id = o.punchable_id
+        ORDER BY growth DESC
+        LIMIT $3
+      SQL
+      
+      now = Time.utc
+      recent_start = now - days.days
+      older_start = recent_start - days.days
+      
+      @db.query_all(
+        sql, 
+        args: [recent_start, older_start, limit], 
+        as: {
+          punchable_type: String, 
+          punchable_id: Int64, 
+          recent_hits: Int64, 
+          older_hits: Int64, 
+          growth: Int64
+        }
+      )
+    end
+    
+    # Get hourly statistics for a specific item
+    def hourly_stats(punchable_type : String, punchable_id : Int64 | Int32, days : Int32 = 7)
+      id = punchable_id.to_i64
+      
+      sql = <<-SQL
+        SELECT 
+          date_trunc('hour', created_at) as hour,
+          SUM(hits) as total_hits
+        FROM punches
+        WHERE punchable_type = $1 
+          AND punchable_id = $2
+          AND created_at >= $3
+        GROUP BY hour
+        ORDER BY hour ASC
+      SQL
+      
+      since = Time.utc - days.days
+      
+      @db.query_all(
+        sql, 
+        args: [punchable_type, id, since], 
+        as: {hour: Time, total_hits: Int64}
+      )
+    end
 
     def clear
       @db.exec("DELETE FROM punches")
+    end
+    
+    # Clean up old data to keep the database size manageable
+    def cleanup(older_than : Time)
+      sql = "DELETE FROM punches WHERE created_at < $1"
+      result = @db.exec(sql, args: [older_than])
+      Log.info { "Cleaned up #{result.rows_affected} old punch records" }
+      result.rows_affected
     end
   end
 end
