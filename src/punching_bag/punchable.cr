@@ -35,7 +35,15 @@ module PunchingBag
           punchable_type = self.class.name
 
           # Create a tracker instance with the database connection
-          tracker = PunchingBag::Tracker.new(DB.open(PunchingBag::Configuration.config.database_url))
+          db = if DB.responds_to?(:get_connection)
+                 # Use connection pool if available
+                 DB.get_connection(PunchingBag::Configuration.config.database_url)
+               else
+                 # Create a new connection if needed
+                 DB.open(PunchingBag::Configuration.config.database_url)
+               end
+
+          tracker = PunchingBag::Tracker.new(db)
 
           # Get the total hits
           tracker.total_hits(punchable_type, id)
@@ -43,7 +51,7 @@ module PunchingBag
           Log.error(exception: ex) { "Error getting view count for #{self.class.name} ##{id}: #{ex.message}" }
           return 0_i64
         ensure
-          tracker.try(&.db.close)
+          tracker.try(&.db.close) unless DB.responds_to?(:get_connection)
         end
       end
 
