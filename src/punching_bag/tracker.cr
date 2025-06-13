@@ -73,7 +73,7 @@ module PunchingBag
         "SELECT SUM(hits) FROM punches WHERE punchable_type = $1 AND punchable_id = $2",
         punchable_type, id
       )
-
+      
       case result
       when Int64
         result
@@ -88,6 +88,7 @@ module PunchingBag
       when Nil
         0_i64
       else
+        Log.warn { "Unexpected result type in total_hits: #{result.class}" }
         0_i64
       end
     end
