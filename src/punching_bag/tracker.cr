@@ -83,6 +83,8 @@ module PunchingBag
         result.to_i64
       when Slice(UInt8)
         result.to_s.to_i64
+      when String
+        result.to_i64
       when Nil
         0_i64
       else
