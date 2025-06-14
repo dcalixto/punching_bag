@@ -272,24 +272,19 @@ module PunchingBag
       end
     end
 
-    # Add this method to the Tracker class
-    def self.track(punchable_type : String, punchable_id : Int64 | Int32, hits : Int32 = 1, db_url : String? = nil)
-      db_url ||= PunchingBag::Configuration.config.database_url
-
-      # Open a database connection
-      db = DB.open(db_url)
-      tracker = new(db)
-
+    # Add a static method for convenience
+    def self.track(punchable_type : String, punchable_id : Int64, hits = 1, time = Time.utc)
       begin
-        # Record the hit
-        result = tracker.punch(punchable_type, punchable_id, hits)
-        Log.info { "View tracked for #{punchable_type} ##{punchable_id}" }
+        db = DB.open(PunchingBag::Configuration.config.database_url)
+        tracker = PunchingBag::Tracker.new(db)
+        result = tracker.punch(punchable_type, punchable_id, hits, time)
+        Log.info { "Punch registrado para #{punchable_type} ##{punchable_id}" }
         result
       rescue ex
         Log.error(exception: ex) { "Failed to track view for #{punchable_type} ##{punchable_id}: #{ex.message}" }
         false
       ensure
-        db.close
+        db.try(&.close)
       end
     end
   end
