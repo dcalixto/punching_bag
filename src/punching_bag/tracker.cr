@@ -1,10 +1,10 @@
 module PunchingBag
   class Tracker
     getter db : DB::Database
-    
+
     # Singleton pattern to avoid repeated initializations
     @@instance : Tracker? = nil
-    
+
     def self.instance(db : DB::Database) : Tracker
       @@instance ||= new(db)
     end
@@ -75,21 +75,21 @@ module PunchingBag
     # Batch punch multiple items at once for better performance
     def batch_punch(items : Array(NamedTuple(type: String, id: Int64 | Int32, hits: Int32)))
       return true if items.empty?
-      
+
       timestamp = Time.utc
-      
+
       sql = <<-SQL
         INSERT INTO punches (punchable_type, punchable_id, hits, created_at, starts_at, ends_at)
         VALUES 
       SQL
-      
+
       values = [] of String
       args = [] of DB::Any
-      
+
       items.each_with_index do |item, index|
         base = index * 6
         values << "($#{base + 1}, $#{base + 2}, $#{base + 3}, $#{base + 4}, $#{base + 5}, $#{base + 6})"
-        
+
         args << item[:type]
         args << item[:id].to_i64
         args << item[:hits]
@@ -97,9 +97,9 @@ module PunchingBag
         args << timestamp
         args << timestamp + 1.hour
       end
-      
+
       sql += values.join(", ")
-      
+
       begin
         @db.exec(sql, args: args)
         Log.info { "Batch punch registrado para #{items.size} items" }
@@ -118,7 +118,7 @@ module PunchingBag
         "SELECT SUM(hits) FROM punches WHERE punchable_type = $1 AND punchable_id = $2",
         punchable_type, id
       )
-      
+
       case result
       when Int64
         result
@@ -150,7 +150,7 @@ module PunchingBag
 
       @db.query_all(sql, args: [since, limit], as: {punchable_type: String, punchable_id: Int64, total_hits: Int64})
     end
-    
+
     # Get trending items with the highest growth rate in hits
     def trending(days : Int32 = 7, limit : Int32 = 10)
       sql = <<-SQL
@@ -183,28 +183,28 @@ module PunchingBag
         ORDER BY growth DESC
         LIMIT $3
       SQL
-      
+
       now = Time.utc
       recent_start = now - days.days
       older_start = recent_start - days.days
-      
+
       @db.query_all(
-        sql, 
-        args: [recent_start, older_start, limit], 
+        sql,
+        args: [recent_start, older_start, limit],
         as: {
-          punchable_type: String, 
-          punchable_id: Int64, 
-          recent_hits: Int64, 
-          older_hits: Int64, 
-          growth: Int64
+          punchable_type: String,
+          punchable_id:   Int64,
+          recent_hits:    Int64,
+          older_hits:     Int64,
+          growth:         Int64,
         }
       )
     end
-    
+
     # Get hourly statistics for a specific item
     def hourly_stats(punchable_type : String, punchable_id : Int64 | Int32, days : Int32 = 7)
       id = punchable_id.to_i64
-      
+
       sql = <<-SQL
         SELECT 
           date_trunc('hour', created_at) as hour,
@@ -216,12 +216,12 @@ module PunchingBag
         GROUP BY hour
         ORDER BY hour ASC
       SQL
-      
+
       since = Time.utc - days.days
-      
+
       @db.query_all(
-        sql, 
-        args: [punchable_type, id, since], 
+        sql,
+        args: [punchable_type, id, since],
         as: {hour: Time, total_hits: Int64}
       )
     end
@@ -229,7 +229,7 @@ module PunchingBag
     def clear
       @db.exec("DELETE FROM punches")
     end
-    
+
     # Clean up old data to keep the database size manageable
     def cleanup(older_than : Time)
       sql = "DELETE FROM punches WHERE created_at < $1"
@@ -240,15 +240,15 @@ module PunchingBag
 
     def average_time(punchable_type : String, punchable_id : Int64 | Int32) : Time
       id = punchable_id.to_i64
-      
+
       sql = <<-SQL
         SELECT AVG(created_at) as avg_time
         FROM punches
         WHERE punchable_type = $1 AND punchable_id = $2
       SQL
-      
+
       result = @db.query_one?(sql, args: [punchable_type, id], as: {avg_time: Time?})
-      
+
       if result && result[:avg_time]
         result[:avg_time]
       else
@@ -260,13 +260,34 @@ module PunchingBag
     # Add this method to the Tracker class
     def self.with_connection(db_url : String? = nil, &block)
       db_url ||= PunchingBag::Configuration.config.database_url
-      
+
       # If a connection URL is provided, open a new connection
       db = DB.open(db_url)
       tracker = new(db)
-      
+
       begin
         yield tracker
+      ensure
+        db.close
+      end
+    end
+
+    # Add this method to the Tracker class
+    def self.track(punchable_type : String, punchable_id : Int64 | Int32, hits : Int32 = 1, db_url : String? = nil)
+      db_url ||= PunchingBag::Configuration.config.database_url
+
+      # Open a database connection
+      db = DB.open(db_url)
+      tracker = new(db)
+
+      begin
+        # Record the hit
+        result = tracker.punch(punchable_type, punchable_id, hits)
+        Log.info { "View tracked for #{punchable_type} ##{punchable_id}" }
+        result
+      rescue ex
+        Log.error(exception: ex) { "Failed to track view for #{punchable_type} ##{punchable_id}: #{ex.message}" }
+        false
       ensure
         db.close
       end
