@@ -115,7 +115,7 @@ module PunchingBag
       id = punchable_id.to_i64
 
       result = @db.scalar(
-        "SELECT SUM(hits) FROM punches WHERE punchable_type = $1 AND punchable_id = $2",
+        "SELECT COALESCE(SUM(hits), 0) FROM punches WHERE punchable_type = $1 AND punchable_id = $2",
         punchable_type, id
       )
 
@@ -131,6 +131,7 @@ module PunchingBag
       when String
         result.to_i64
       when Nil
+        # Handle NULL result (no records found)
         0_i64
       else
         Log.warn { "Unexpected result type in total_hits: #{result.class}" }
