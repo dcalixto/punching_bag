@@ -38,37 +38,82 @@ module PunchingBag
       @db.exec(sql)
     end
 
-    def punch(punchable_type : String, punchable_id : Int64 | Int32, hits : Int32 = 1, timestamp : Time = Time.utc)
+    #   def punch(punchable_type : String, punchable_id : Int64 | Int32, hits : Int32 = 1, timestamp : Time = Time.utc)
+    #     id = punchable_id.to_i64
+    #     sql = <<-SQL
+    #   INSERT INTO punches (
+    #     punchable_type,  -- Ordem correta: tipo primeiro
+    #     punchable_id,    -- ID segundo
+    #     hits,
+    #     created_at,
+    #     starts_at,
+    #     ends_at
+    #   ) VALUES ($1, $2, $3, $4, $5, $6)
+    # SQL
+
+    #     args = [
+    #       punchable_type,     # 1: String
+    #       id,                 # 2: Int64
+    #       hits,               # 3: Int32
+    #       timestamp,          # 4: Time
+    #       timestamp,          # 5: Time (starts_at)
+    #       timestamp + 1.hour, # 6: Time (ends_at)
+    #     ]
+
+    #     Log.debug { "Executando: #{sql} com args: #{args}" }
+
+    #     begin
+    #       @db.exec(sql, args: args)
+    #       Log.info { "Punch registrado para #{punchable_type} ##{id}" }
+    #       true
+    #     rescue ex : DB::Error
+    #       Log.error(exception: ex) { "FALHA no INSERT: #{ex.message}" }
+    #       false
+    #     end
+    #   end
+
+    def punch(punchable_type : String, punchable_id : Int64 | Int32, hits = 1, time = Time.utc) : Bool
+      # Convert Int32 to Int64 if needed
       id = punchable_id.to_i64
-      sql = <<-SQL
-    INSERT INTO punches (
-      punchable_type,  -- Ordem correta: tipo primeiro
-      punchable_id,    -- ID segundo
-      hits,
-      created_at,
-      starts_at,
-      ends_at
-    ) VALUES ($1, $2, $3, $4, $5, $6)
-  SQL
 
-      args = [
-        punchable_type,     # 1: String
-        id,                 # 2: Int64
-        hits,               # 3: Int32
-        timestamp,          # 4: Time
-        timestamp,          # 5: Time (starts_at)
-        timestamp + 1.hour, # 6: Time (ends_at)
-      ]
-
-      Log.debug { "Executando: #{sql} com args: #{args}" }
+      Log.debug { "Attempting to punch #{punchable_type} ##{id} with #{hits} hits at #{time}" }
 
       begin
-        @db.exec(sql, args: args)
-        Log.info { "Punch registrado para #{punchable_type} ##{id}" }
-        true
-      rescue ex : DB::Error
-        Log.error(exception: ex) { "FALHA no INSERT: #{ex.message}" }
-        false
+        # First, try to find an existing punch for this hour
+        hour_start = time.at_beginning_of_hour
+        hour_end = hour_start + 1.hour
+
+        # Check if a punch already exists for this hour
+        existing_punch = @db.query_one?(
+          "SELECT id, hits FROM punches WHERE punchable_type = $1 AND punchable_id = $2 AND created_at >= $3 AND created_at < $4 LIMIT 1",
+          punchable_type, id, hour_start, hour_end,
+          as: {Int64, Int32}
+        )
+
+        if existing_punch
+          punch_id, current_hits = existing_punch
+          Log.debug { "Found existing punch ##{punch_id} with #{current_hits} hits, updating..." }
+
+          # Update the existing punch
+          @db.exec(
+            "UPDATE punches SET hits = hits + $1 WHERE id = $2",
+            hits, punch_id
+          )
+        else
+          Log.debug { "No existing punch found, creating new one" }
+
+          # Create a new punch
+          @db.exec(
+            "INSERT INTO punches (punchable_type, punchable_id, hits, created_at, starts_at, ends_at) VALUES ($1, $2, $3, $4, $5, $6)",
+            punchable_type, id, hits, time, hour_start, hour_end
+          )
+        end
+
+        Log.debug { "Successfully punched #{punchable_type} ##{id}" }
+        return true
+      rescue ex
+        Log.error(exception: ex) { "Failed to punch #{punchable_type} ##{id}: #{ex.message}" }
+        return false
       end
     end
 
