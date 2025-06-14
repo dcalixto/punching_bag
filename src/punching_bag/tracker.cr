@@ -237,5 +237,39 @@ module PunchingBag
       Log.info { "Cleaned up #{result.rows_affected} old punch records" }
       result.rows_affected
     end
+
+    def average_time(punchable_type : String, punchable_id : Int64 | Int32) : Time
+      id = punchable_id.to_i64
+      
+      sql = <<-SQL
+        SELECT AVG(created_at) as avg_time
+        FROM punches
+        WHERE punchable_type = $1 AND punchable_id = $2
+      SQL
+      
+      result = @db.query_one?(sql, args: [punchable_type, id], as: {avg_time: Time?})
+      
+      if result && result[:avg_time]
+        result[:avg_time]
+      else
+        # Return current time if no punches exist
+        Time.utc
+      end
+    end
+
+    # Add this method to the Tracker class
+    def self.with_connection(db_url : String? = nil, &block)
+      db_url ||= PunchingBag::Configuration.config.database_url
+      
+      # If a connection URL is provided, open a new connection
+      db = DB.open(db_url)
+      tracker = new(db)
+      
+      begin
+        yield tracker
+      ensure
+        db.close
+      end
+    end
   end
 end
