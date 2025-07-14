@@ -7,8 +7,19 @@ require "./punching_bag/tracker"
 require "./punching_bag/cli"
 
 module PunchingBag
+  @@db : DB::Database? = nil
+  @@tracker_instance : Tracker? = nil
+
   def self.configure(&)
     yield Configuration.config
+  end
+
+  def self.db
+    @@db.not_nil!
+  end
+
+  def self.db=(database : DB::Database)
+    @@db = database
   end
 
   # Helper method to verify the database setup
@@ -41,5 +52,33 @@ module PunchingBag
     ensure
       db.try(&.close)
     end
+  end
+
+  # Singleton para evitar múltiplas inicializações
+  def self.tracker
+    @@tracker_instance ||= Tracker.new(db)
+  end
+
+  class Tracker
+    getter db : DB::Database
+    @@setup_completed = false
+
+    def initialize(@db : DB::Database)
+      setup_database unless @@setup_completed
+    end
+
+    def setup_database
+      return if @@setup_completed
+
+      setup_table
+      @db.exec "DROP INDEX IF EXISTS idx_punches_punchable"
+      @db.exec "DROP INDEX IF EXISTS punchable_index"
+      @db.exec "CREATE INDEX IF NOT EXISTS punchable_index ON punches (punchable_type, punchable_id)"
+      @db.exec "CREATE INDEX IF NOT EXISTS idx_punches_created_at ON punches (created_at)"
+
+      @@setup_completed = true
+    end
+
+    # ... resto dos métodos permanecem iguais
   end
 end
