@@ -1,6 +1,6 @@
 # Punching Bag
 
-![Punch Bag](./src/punching-bag.gif)
+![Punch Bag](./src/punching-bag.jpg)
 
 A Crystal shard for tracking and analyzing hit counts, trending items, time and location analytics for PostgreSQL.
 
